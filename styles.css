@@ -1,0 +1,93 @@
+/* ── SleepR Dashboard – Custom Theme ───────────────────────────────────────
+   Inter for UI text · JetBrains Mono for data · Teal accent #2a9d8f
+   Mobile-first: stacks to single column on narrow viewports
+   ─────────────────────────────────────────────────────────────────────────*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Base ─────────────────────────────────────────────────────────────────*/
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background: #f8fafc;
+  color: #0b0b0c;
+}
+
+/* ── Navbar ───────────────────────────────────────────────────────────────*/
+.navbar {
+  background-color: #0b0b0c !important;
+  border-bottom: 2px solid #2a9d8f;
+}
+.navbar-brand,
+.navbar-nav > li > a {
+  color: #f8fafc !important;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.navbar-nav > li > a:hover {
+  color: #2a9d8f !important;
+}
+
+/* ── Value boxes ─────────────────────────────────────────────────────────*/
+.value-box .value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.9rem;
+  color: #2a9d8f;
+}
+.value-box .caption {
+  font-size: 0.78rem;
+  color: #6b7280;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.value-box {
+  border-left: 3px solid #2a9d8f;
+  border-radius: 6px;
+}
+
+/* ── Chart panels ────────────────────────────────────────────────────────*/
+.chart-wrapper,
+.chart-stage {
+  border-radius: 8px;
+  background: #ffffff;
+}
+.chart-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: 0.02em;
+}
+
+/* ── Impact footer ───────────────────────────────────────────────────────*/
+.impact {
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  color: #374151;
+  border-left: 3px solid #2a9d8f;
+  background: #f0fdfb;
+  border-radius: 0 6px 6px 0;
+  line-height: 1.55;
+}
+
+/* ── DataTable tweaks ────────────────────────────────────────────────────*/
+table.dataTable td,
+table.dataTable th {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+table.dataTable thead th {
+  background: #f8fafc;
+  border-bottom: 2px solid #2a9d8f;
+  color: #374151;
+  font-weight: 600;
+}
+
+/* ── Math / model tab ────────────────────────────────────────────────────*/
+.MathJax { font-size: 1.05em !important; }
+
+/* ── Mobile responsiveness ───────────────────────────────────────────────*/
+@media (max-width: 768px) {
+  .chart-title { font-size: 0.75rem; }
+  .value-box .value { font-size: 1.5rem; }
+  .flexdashboard-col { width: 100% !important; float: none !important; }
+  .impact { font-size: 0.76rem; }
+}

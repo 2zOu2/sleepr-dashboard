@@ -1,0 +1,317 @@
+---
+title: "When are stroke recovery patients most vulnerable to waking or falling asleep?"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    css: styles.css
+    social: menu
+    source_code: "https://github.com/zhengyiou/sleepr-dashboard"
+    navbar:
+      - { title: "GitHub ↗", href: "https://github.com/zhengyiou/sleepr-dashboard", align: right }
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(plotly)
+library(DT)
+library(dplyr)
+library(tidyr)
+library(htmltools)
+
+# -----------------------------------------------------------------------------
+# Load your posterior-summary data here. Expected columns:
+#   hour        integer 0-23
+#   kind        "sleep" or "wake"
+#   mean_dur    predicted episode duration (minutes)
+#   lower_95    95% credible interval lower bound
+#   upper_95    95% credible interval upper bound
+#   n_episodes integer, episodes in hour bin
+#
+# Example: curves <- readr::read_csv("data/posterior_duration_by_hour.csv")
+#
+# The dummy below lets the Rmd knit before you wire real data in.
+# -----------------------------------------------------------------------------
+set.seed(1)
+hours <- 0:23
+mk <- function(phase, base, amp) {
+  rad <- ((hours - phase) / 24) * 2 * pi
+  base + amp * cos(rad) + (amp / 6) * cos(rad * 2)
+}
+curves <- tibble(
+  hour       = rep(hours, 2),
+  kind       = rep(c("sleep", "wake"), each = 24),
+  mean_dur   = c(mk(1, 95, 55), mk(9, 70, 55)),
+  lower_95   = c(mk(1, 95, 55) - 22, mk(9, 70, 55) - 22),
+  upper_95   = c(mk(1, 95, 55) + 22, mk(9, 70, 55) + 22),
+  n_episodes = sample(380:520, 48, replace = TRUE)
+)
+
+# Per-participant deviations (for Widget 2 table). Replace with your posterior summary.
+participants <- tibble(
+  patient_id      = sprintf("P-%03d", c(160,159,56,28,61,43,77,102,115,88,19,204,33,141,7,91)),
+  sa_deviation    = round(rnorm(16, 0, 0.25), 2),
+  as_deviation    = round(rnorm(16, 0, 0.25), 2),
+  sd_across_hours = round(runif(16, 0.20, 0.55), 2),
+  n_episodes      = sample(160:310, 16)
+)
+
+# Shared plotly config — strip default toolbar clutter.
+# Wrap config() calls in this helper instead of splicing a list.
+apply_config <- function(p) {
+  plotly::config(
+    p,
+    displaylogo = FALSE,
+    modeBarButtonsToRemove = list(
+      "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d",
+      "autoScale2d", "toggleSpikelines", "hoverClosestCartesian",
+      "hoverCompareCartesian"
+    )
+  )
+}
+
+# Palette
+ACCENT <- "#2a9d8f"  # teal
+ACCENT_SOFT <- "rgba(42,157,143,0.18)"
+INK    <- "#0b0b0c"
+MUTE   <- "#6b7280"
+```
+
+Overview {data-icon="fa-chart-line"}
+=====================================
+
+Row {data-height=120}
+-------------------------------------
+
+### Patients
+
+```{r}
+valueBox(50, caption = "Patients (stroke recovery)", icon = "fa-user-group", color = "#f8fafc")
+```
+
+### Episodes
+
+```{r}
+valueBox("10,715", caption = "Sleep + wake episodes", icon = "fa-moon", color = "#f8fafc")
+```
+
+### 95% PI Coverage
+
+```{r}
+valueBox("97.3%", caption = "Wake-transition model", icon = "fa-bullseye", color = "#f8fafc")
+```
+
+### Median error
+
+```{r}
+valueBox("1.6 min", caption = "Sleep-transition model", icon = "fa-ruler", color = "#f8fafc")
+```
+
+Row {data-height=480}
+-------------------------------------
+
+### Widget 1 — Predicted sleep-episode duration by onset hour (minutes)
+
+```{r widget1}
+sleep <- curves %>% filter(kind == "sleep")
+
+p1 <- plot_ly() %>%
+  # Night shading 21:00–06:00
+  add_trace(
+    x = c(21, 24, 24, 21), y = c(0, 0, 200, 200),
+    type = "scatter", mode = "none", fill = "toself",
+    fillcolor = "rgba(15,23,42,0.05)", hoverinfo = "skip", showlegend = FALSE
+  ) %>%
+  add_trace(
+    x = c(0, 6, 6, 0), y = c(0, 0, 200, 200),
+    type = "scatter", mode = "none", fill = "toself",
+    fillcolor = "rgba(15,23,42,0.05)", hoverinfo = "skip", showlegend = FALSE
+  ) %>%
+  # 95% credible interval ribbon
+  add_ribbons(
+    data = sleep, x = ~hour, ymin = ~lower_95, ymax = ~upper_95,
+    fillcolor = ACCENT_SOFT, line = list(color = "transparent"),
+    name = "95% credible interval",
+    hoverinfo = "skip"
+  ) %>%
+  # Population line — this is the trace that owns the tooltip
+  add_trace(
+    data = sleep, x = ~hour, y = ~mean_dur,
+    type = "scatter", mode = "lines+markers",
+    line = list(color = ACCENT, width = 3),
+    marker = list(color = ACCENT, size = 6),
+    name = "Population average",
+    text = ~sprintf(
+      paste0(
+        "<b>Sleep episode · %02d:00</b><br>",
+        "Predicted duration: <b>%d min</b><br>",
+        "95%% CI: [%d, %d] min<br>",
+        "Episodes in bin: %s"
+      ),
+      hour, round(mean_dur), round(lower_95), round(upper_95),
+      formatC(n_episodes, big.mark = ",")
+    ),
+    hoverinfo = "text"
+  ) %>%
+  layout(
+    xaxis = list(
+      title = "Hour of sleep onset (24h clock)",
+      tickmode = "array", tickvals = seq(0, 24, 3),
+      ticktext = sprintf("%02d:00", seq(0, 24, 3)),
+      gridcolor = "#eef0f3", zeroline = FALSE
+    ),
+    yaxis = list(
+      title = "Predicted episode duration (minutes)",
+      gridcolor = "#eef0f3", zeroline = FALSE, range = c(0, 200)
+    ),
+    hoverlabel = list(
+      bgcolor = "white", bordercolor = ACCENT,
+      font = list(family = "ui-monospace, monospace", size = 12, color = INK)
+    ),
+    margin = list(l = 60, r = 20, t = 10, b = 50),
+    paper_bgcolor = "white", plot_bgcolor = "white",
+    legend = list(orientation = "h", x = 0, y = 1.08, font = list(size = 11))
+  ) %>%
+  apply_config()
+
+p1
+```
+
+### Widget 1b — Survival curves by start hour
+
+```{r}
+# P(episode >= t | starts at hour h) — Weibull approximation for illustration
+tgrid <- seq(0, 150, by = 5)
+start_hours <- c(1, 5, 11, 17, 21)
+pal <- c("#3b82f6", "#0ea5e9", "#eab308", "#f97316", "#a855f7")
+
+surv <- purrr::map2_dfr(
+  start_hours, seq_along(start_hours),
+  function(h, i) {
+    scale <- (curves$mean_dur[curves$kind == "sleep" & curves$hour == h]) * 1.1
+    s <- exp(-(pmax(0.01, tgrid) / scale) ^ 1.3)
+    tibble(t = tgrid, s = s, start = sprintf("%02d:00", h))
+  }
+)
+
+p1b <- plot_ly()
+for (i in seq_along(start_hours)) {
+  h <- start_hours[i]
+  d <- surv %>% filter(start == sprintf("%02d:00", h))
+  p1b <- p1b %>% add_trace(
+    data = d, x = ~t, y = ~s,
+    type = "scatter", mode = "lines",
+    line = list(color = pal[i], width = 2.25),
+    name = sprintf("%02d:00", h),
+    hovertemplate = paste0(
+      "<b>Start ", sprintf("%02d:00", h), "</b><br>",
+      "Duration ≥ %{x} min<br>",
+      "Probability: <b>%{y:.0%}</b><extra></extra>"
+    )
+  )
+}
+p1b <- p1b %>% layout(
+  xaxis = list(title = "Episode duration (minutes)", gridcolor = "#eef0f3", zeroline = FALSE),
+  yaxis = list(title = "Survival probability", tickformat = ".0%",
+               gridcolor = "#eef0f3", zeroline = FALSE, range = c(0, 1)),
+  hoverlabel = list(bgcolor = "white", font = list(family = "ui-monospace, monospace", size = 12)),
+  legend = list(title = list(text = "Start hour"), orientation = "v", x = 1.02, y = 1),
+  margin = list(l = 60, r = 110, t = 10, b = 50),
+  paper_bgcolor = "white", plot_bgcolor = "white"
+) %>% apply_config()
+
+p1b
+```
+
+Row {data-height=360}
+-------------------------------------
+
+### Widget 2 — Per-participant circadian deviations (searchable, sortable)
+
+```{r widget2}
+participants %>%
+  transmute(
+    `Patient ID` = patient_id,
+    `Sleep-to-Wake Deviation (log-hazard)` = sa_deviation,
+    `Wake-to-Sleep Deviation (log-hazard)` = as_deviation,
+    `SD Across Hours` = sd_across_hours,
+    `Episodes (n)` = n_episodes
+  ) %>%
+  datatable(
+    rownames = FALSE,
+    filter = "top",
+    options = list(
+      pageLength = 8, dom = "tip",
+      columnDefs = list(list(className = "dt-right", targets = 1:4)),
+      order = list(list(3, "desc"))
+    ),
+    class = "compact stripe hover",
+    caption = htmltools::tags$caption(
+      style = "caption-side: bottom; text-align: left; font-size: 11px; color: #6b7280;",
+      "Positive Sleep-to-Wake deviation = individual wakes sooner than the population average at that hour. Click a column header to sort; use the row above each column to filter."
+    )
+  ) %>%
+  formatStyle(
+    "Sleep-to-Wake Deviation (log-hazard)",
+    background = styleColorBar(c(-0.6, 0.6), "#bfe3de"),
+    backgroundSize = "98% 60%", backgroundRepeat = "no-repeat", backgroundPosition = "center"
+  ) %>%
+  formatStyle(
+    "Wake-to-Sleep Deviation (log-hazard)",
+    background = styleColorBar(c(-0.6, 0.6), "#fdd0a2"),
+    backgroundSize = "98% 60%", backgroundRepeat = "no-repeat", backgroundPosition = "center"
+  )
+```
+
+Row {data-height=80}
+-------------------------------------
+
+### {.no-padding}
+
+<div class="impact">
+<b>Why this matters —</b> Quantifying <i>when</i> stroke recovery patients are most vulnerable to fragmented sleep gives clinicians a time-targeted window for intervention — medication scheduling, environmental cues, sleep-hygiene prompts — that a single nightly sleep score cannot. Applied at scale, this shifts rehabilitation from retrospective sleep summaries to prospective, hour-level guidance personalized to each patient's circadian profile.
+</div>
+
+
+About the data {data-icon="fa-database"}
+=====================================
+
+Column
+-------------------------------------
+
+### Dataset
+
+**Source:** SleepR Study, NIH Award R01NR018979 — source data is confidential and is not redistributed in this repository. **Sample:** 50 adult inpatient and outpatient stroke rehabilitation patients in Atlanta, GA contributed 10,715 contiguous sleep/wake episodes recorded between 2021 and 2024. **Collection:** Wrist actigraphy was sampled continuously at one-minute epochs, classified into binary sleep/wake states using a validated threshold algorithm, and collapsed into episodes pooled across five nights by clock-time of onset. **Variables:** Each episode is described by its onset hour (0–23), posterior mean duration (minutes), 95% credible-interval bounds, episode count, and per-patient log-hazard random effects for the sleep→wake and wake→sleep transitions. **Processing:** Episodes truncated by recording boundaries were right-censored; 24-hour and 12-hour Fourier harmonics of onset hour were pre-computed per episode as fixed-effect covariates.
+
+
+Model {data-icon="fa-chart-area"}
+=====================================
+
+Column
+-------------------------------------
+
+### Bayesian hierarchical Weibull hazard
+
+A continuous-time Weibull proportional hazards model for episode-level sleep→wake (SA) and wake→sleep (AS) transitions, with cyclic AR(1) random effects to capture person-specific circadian profiles.
+
+$$h_r(t \mid \eta_n) = \kappa_r\,\exp(\eta_n)\,t^{\kappa_r - 1}, \qquad r \in \{\text{SA}, \text{AS}\}$$
+
+$$\eta_n = \alpha + b_{h_n,\,i_n} + \beta_{c_1} c^{(1)}_n + \beta_{s_1} s^{(1)}_n + \beta_{c_2} c^{(2)}_n + \beta_{s_2} s^{(2)}_n$$
+
+Hierarchical cyclic correlation across hours borrows strength across neighbouring hours and across midnight; weakly-informative priors encode gradual circadian variation and moderate subject-level deviation. Fit in Stan, 4 chains × 2,000 iterations, all R̂ < 1.01.
+
+
+Impact {data-icon="fa-bullseye"}
+=====================================
+
+Column
+-------------------------------------
+
+### Why this project matters
+
+Quantifying <i>when</i> stroke recovery patients are most vulnerable to fragmented sleep gives clinicians a time-targeted window for intervention — medication scheduling, environmental cues, sleep-hygiene prompts — that a single nightly sleep score cannot. Applied at scale, this shifts rehabilitation from retrospective sleep summaries to prospective, hour-level guidance personalized to each patient's circadian profile.
+
+### Source code
+
+<p>Full source, data-prep scripts, Stan model code, and this dashboard's Rmd live at
+<a href="https://github.com/zhengyiou/sleepr-dashboard" target="_blank">github.com/zhengyiou/sleepr-dashboard ↗</a>.</p>
