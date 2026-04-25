@@ -8,7 +8,7 @@ A flexdashboard built on top of a Bayesian hierarchical Weibull hazard model for
 🧪 **Capstone:** Rollins School of Public Health, Emory University  
 👤 **Author:** Zhengyi Ou · MSPH Biostatistics, Class of 2026  
 👥 **Advisors:** Emily N. Peterson · George D. Fulk  
-📄 **Funding:** NIH NINR Award R01NR018979
+
 
 ---
 
