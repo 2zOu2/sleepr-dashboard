@@ -6,9 +6,9 @@ output:
     vertical_layout: fill
     css: styles.css
     social: menu
-    source_code: "https://github.com/zhengyiou/sleepr-dashboard"
+    source_code: "https://github.com/2zOu2/sleepr-dashboard"
     navbar:
-      - { title: "GitHub ↗", href: "https://github.com/zhengyiou/sleepr-dashboard", align: right }
+      - { title: "GitHub ↗", href: "https://github.com/2zOu2/sleepr-dashboard", align: right }
 ---
 
 ```{r setup, include=FALSE}
