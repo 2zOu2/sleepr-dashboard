@@ -4,7 +4,7 @@
 
 A flexdashboard built on top of a Bayesian hierarchical Weibull hazard model for sleep–wake transitions, fit to 5-day wrist actigraphy from 50 patients in stroke recovery.
 
-🔗 **Live dashboard:** [[https://2zOu2.github.io/slepr-dashboard ](https://github.com/2zOu2/sleepr-dashboard/blob/main/index.html) ]
+🔗 **Live dashboard:** https://2zOu2.github.io/slepr-dashboard
 
 🧪 **Capstone:** Rollins School of Public Health, Emory University  
 👤 **Author:** Zhengyi Ou · MSPH Biostatistics, Class of 2026  
